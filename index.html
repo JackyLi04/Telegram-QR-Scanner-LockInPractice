@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Telegram QR Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin: 2rem; }
+    #reader { width: 100%; max-width: 400px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <h1>Scan a QR Code</h1>
+  <div id="reader"></div>
+
+  <script>
+    // Telegram WebApp API
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // make the popup full-screen
+
+    // Start the camera & QR scanner
+    const html5Qr = new Html5Qrcode("reader");
+    html5Qr.start(
+      { facingMode: "environment" },              // back-camera
+      { fps: 10, qrbox: 250 },                    // scan settings
+      (decodedText) => {                          // onSuccess
+        tg.sendData(decodedText);                 // send back to bot
+        html5Qr.stop();                           // stop camera
+      },
+      (errorMessage) => { /* ignore scan fails */ }
+    );
+  </script>
+</body>
+</html>
