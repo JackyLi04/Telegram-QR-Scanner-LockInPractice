@@ -3,32 +3,86 @@
 <head>
   <meta charset="utf-8" />
   <title>Telegram QR Scanner</title>
+
+  <!-- HTML5-QRCode library -->
   <script src="https://unpkg.com/html5-qrcode"></script>
+
   <style>
-    body { font-family: sans-serif; text-align: center; margin: 2rem; }
-    #reader { width: 100%; max-width: 400px; margin: 0 auto; }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 2rem;
+    }
+    #reader {
+      width: 100%;
+      max-width: 400px;
+      margin: 1rem auto;
+      border: 1px solid #ddd;
+    }
+    #info {
+      margin-top: 1rem;
+      color: #555;
+    }
   </style>
 </head>
 <body>
   <h1>Scan a QR Code</h1>
   <div id="reader"></div>
+  <div id="info">Initializing camera…</div>
 
   <script>
-    // Telegram WebApp API
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // make the popup full-screen
+    // helper to write status
+    const infoEl = document.getElementById("info");
+    function setInfo(msg) { infoEl.textContent = msg; }
 
-    // Start the camera & QR scanner
+    // Telegram WebApp (if inside Telegram)
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.expand(); 
+    }
+
+    // Create the scanner
     const html5Qr = new Html5Qrcode("reader");
-    html5Qr.start(
-      { facingMode: "environment" },              // back-camera
-      { fps: 10, qrbox: 250 },                    // scan settings
-      (decodedText) => {                          // onSuccess
-        tg.sendData(decodedText);                 // send back to bot
-        html5Qr.stop();                           // stop camera
-      },
-      (errorMessage) => { /* ignore scan fails */ }
-    );
+
+    // First, list cameras
+    Html5Qrcode.getCameras()
+      .then(cameras => {
+        if (!cameras || !cameras.length) {
+          setInfo("❌ No cameras found.");
+          return;
+        }
+        // choose the first camera
+        const cameraId = cameras[0].id;
+        setInfo("🎥 Starting camera…");
+
+        // now start scanning
+        html5Qr.start(
+          { deviceId: { exact: cameraId } },
+          { fps: 10, qrbox: 250 },
+          decodedText => {
+            setInfo("✅ QR code detected!");
+            // send data back to Telegram (or just alert if not in Telegram)
+            if (tg) {
+              tg.sendData(decodedText);
+            } else {
+              alert("Scanned: " + decodedText);
+            }
+            html5Qr.stop();
+          },
+          error => {
+            // you can log decode errors if you like
+            // console.warn("decode error", error);
+          }
+        )
+        .catch(err => {
+          console.error("Unable to start scanner", err);
+          setInfo("❌ Could not start camera. Check permissions.");
+        });
+      })
+      .catch(err => {
+        console.error("getCameras() failed", err);
+        setInfo("❌ Failed to access cameras. Check HTTPS & permissions.");
+      });
   </script>
 </body>
 </html>
