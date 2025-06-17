@@ -1,44 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8"/>
   <title>Telegram QR Scanner</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
-    #scanBtn {
-      position:absolute; top:50%; left:50%;
-      transform:translate(-50%,-50%);
-      padding:1em 2em;
-      font-size:1.2rem;
-      cursor:pointer;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style> html,body {margin:0;padding:0;width:100%;height:100;} </style>
 </head>
 <body>
-  <button id="scanBtn">📷 Scan QR Code</button>
-
   <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
 
-    // Launch native QR-scanner
-    document.getElementById("scanBtn").onclick = () => {
-      tg.showScanQrPopup({
-        text: "Align the QR code in the frame"
-      });
-    };
+    // immediately open native scanner
+    tg.showScanQrPopup({ text: "Align the QR code in the frame" });
 
-    // When a QR is successfully scanned:
     tg.onEvent("qrTextReceived", e => {
-      tg.sendData(e.data);              // send it back to your bot
-      tg.closeScanQrPopup();            // close the scanner UI
-    });
-
-    // (Optional) if user closes without scanning:
-    tg.onEvent("scanQrPopupClosed", () => {
-      alert("Scanner closed without a result");
+      tg.sendData(e.data);
+      tg.closeScanQrPopup();
     });
   </script>
 </body>
