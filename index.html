@@ -1,21 +1,30 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"/><title>dbg</title></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Debug WebApp Host</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body { margin:0; padding:1em; font-family:sans-serif; background:#333; color:#fff; }
+    #dbg { background:#e74c3c; padding:1em; border-radius:4px; }
+  </style>
+</head>
 <body>
-  <div id="dbg"
-       style="position:fixed;top:0;left:0;background:red;color:white;padding:4px;z-index:9999">
-    loading…
+  <div id="dbg">
+    <p><strong>Debug Info</strong></p>
+    <p id="host">Host: (loading...)</p>
+    <p id="href">URL: (loading...)</p>
+    <p id="webapp">WebApp API: (checking...)</p>
   </div>
+
   <script>
-    const dbg = document.getElementById("dbg");
-    if (window.Telegram?.WebApp) {
-      dbg.textContent = "✅ WebApp OK";
-      setTimeout(()=> dbg.remove(), 500);
-      Telegram.WebApp.ready();
-      Telegram.WebApp.expand();
-      Telegram.WebApp.showScanQrPopup({ text: "Align the QR code" });
+    document.getElementById('host').textContent = 'Host: ' + location.host;
+    document.getElementById('href').textContent = 'URL: '  + location.href;
+
+    if (window.Telegram && window.Telegram.WebApp) {
+      document.getElementById('webapp').textContent = 'WebApp API: ✅ available';
     } else {
-      dbg.textContent = "❌ Not in WebApp";
+      document.getElementById('webapp').textContent = 'WebApp API: ❌ NOT available';
     }
   </script>
 </body>
