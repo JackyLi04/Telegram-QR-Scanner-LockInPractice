@@ -29,16 +29,36 @@
       border-radius: 20px;
       display: none;
     }
+    #error-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      display: none;
+    }
   </style>
 </head>
 <body>
   <div id="reader"></div>
   <div id="result"></div>
+  <div id="error-message"></div>
 
   <script>
     // Initialize Telegram WebApp
     const tg = window.Telegram.WebApp;
     tg.expand();
+
+    // Show error message
+    function showError(message) {
+      const errorDiv = document.getElementById('error-message');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
 
     // Configure QR Scanner
     const html5QrCode = new Html5Qrcode("reader");
@@ -50,15 +70,33 @@
     };
 
     // Start scanning with back camera
-    function startScanner() {
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        onScanSuccess,
-        onScanFailure
-      ).catch((err) => {
+    async function startScanner() {
+      try {
+        // First check if we have camera permissions
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length === 0) {
+          showError("No cameras found. Please check your device permissions.");
+          return;
+        }
+
+        // Find the back camera
+        const backCamera = devices.find(device => 
+          device.label.toLowerCase().includes('back') || 
+          device.label.toLowerCase().includes('rear')
+        ) || devices[0];
+
+        console.log("Starting camera with device:", backCamera.label);
+
+        await html5QrCode.start(
+          { deviceId: backCamera.id },
+          config,
+          onScanSuccess,
+          onScanFailure
+        );
+      } catch (err) {
         console.error("Error starting scanner:", err);
-      });
+        showError(`Camera error: ${err.message || 'Unknown error'}`);
+      }
     }
 
     // Handle successful scan
@@ -78,7 +116,6 @@
 
     // Handle scan failure
     function onScanFailure(error) {
-      // Handle scan failure silently
       console.warn(`QR scan failure: ${error}`);
     }
 
