@@ -3,140 +3,43 @@
 <head>
   <meta charset="utf-8" />
   <title>Telegram QR Scanner</title>
-  <meta http-equiv="Permissions-Policy" content="camera=(self)" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- html5-qrcode library -->
-  <script src="https://unpkg.com/html5-qrcode"></script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
-      overflow: hidden;
-      background: black;
-    }
-    #reader {
-      width: 100vw;
-      height: 100vh;
-    }
-    /* make the video cover whole area */
-    .html5-qrcode-video {
-      object-fit: cover !important;
-      width: 100% !important;
-      height: 100% !important;
-    }
-    /* hidden by default; only show on errors */
-    #info {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      padding: 0.5em;
-      color: white;
-      background: rgba(0,0,0,0.6);
-      text-align: center;
-      font-family: sans-serif;
-      display: none;
-    }
-    /* external-browser button */
-    #openExternal {
-      position: absolute;
-      top: 10px; right: 10px;
-      z-index: 9999;
-      padding: 0.5em 1em;
-      font-size: 0.9rem;
-      background: #0288d1;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      display: none;
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
+    #scanBtn {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      padding:1em 2em;
+      font-size:1.2rem;
+      cursor:pointer;
     }
   </style>
 </head>
 <body>
-  <div id="reader"></div>
-  <div id="info"></div>
-  <button id="openExternal">Open in Browser</button>
+  <button id="scanBtn">📷 Scan QR Code</button>
 
   <script>
-    const infoEl = document.getElementById("info");
-    const openBtn = document.getElementById("openExternal");
-    function setInfo(msg) {
-      if (msg) {
-        infoEl.textContent = msg;
-        infoEl.style.display = "block";
-      } else {
-        infoEl.style.display = "none";
-      }
-    }
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
 
-    // external Browser helper
-    openBtn.onclick = () => window.open(window.location.href, "_blank");
+    // Launch native QR-scanner
+    document.getElementById("scanBtn").onclick = () => {
+      tg.showScanQrPopup({
+        text: "Align the QR code in the frame"
+      });
+    };
 
-    // telegram WebApp context
-    const tg = window.Telegram?.WebApp;
-    if (tg) tg.expand();
+    // When a QR is successfully scanned:
+    tg.onEvent("qrTextReceived", e => {
+      tg.sendData(e.data);              // send it back to your bot
+      tg.closeScanQrPopup();            // close the scanner UI
+    });
 
-    // instantiate the scanner
-    const html5Qr = new Html5Qrcode("reader");
-
-    // start scanning logic
-    function startScanner() {
-      Html5Qrcode.getCameras()
-        .then(cameras => {
-          if (!cameras.length) {
-            setInfo("❌ No cameras found.");
-            openBtn.style.display = "block";
-            return;
-          }
-          // pick rear camera if possible
-          const back = cameras.find(c=>/back|rear|environment/i.test(c.label)) || cameras[0];
-          return html5Qr.start(
-            { deviceId: { exact: back.id } },
-            {
-              fps: 10,
-              qrbox: { width: window.innerWidth, height: window.innerHeight }
-            },
-            decodedText => {
-              if (tg) tg.sendData(decodedText);
-              else alert("Scanned: " + decodedText);
-              // keep scanning for more codes
-            },
-            () => {}
-          )
-          .then(() => setInfo(""))
-          .catch(err => {
-            console.error("start error", err);
-            setInfo("❌ Unable to start camera.");
-            openBtn.style.display = "block";
-          });
-        })
-        .catch(err => {
-          console.error("camera list error", err);
-          setInfo("❌ Could not access cameras.");
-          openBtn.style.display = "block";
-        });
-    }
-
-    // check camera permission state
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: "camera" })
-        .then(status => {
-          if (status.state === "granted" || status.state === "prompt") {
-            startScanner();
-          } else {
-            setInfo("📷 Camera access denied. Tap below to open in browser and allow.");
-            openBtn.style.display = "block";
-          }
-        })
-        .catch(err => {
-          console.warn("permissions API failed, falling back", err);
-          startScanner();
-        });
-    } else {
-      // permissions API not supported -> just try
-      startScanner();
-    }
+    // (Optional) if user closes without scanning:
+    tg.onEvent("scanQrPopupClosed", () => {
+      alert("Scanner closed without a result");
+    });
   </script>
 </body>
 </html>
