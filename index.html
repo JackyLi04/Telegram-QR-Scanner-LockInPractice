@@ -4,84 +4,98 @@
   <meta charset="utf-8" />
   <title>Telegram QR Scanner</title>
 
-  <!-- HTML5-QRCode library -->
+  <!-- permissions for camera -->
+  <meta http-equiv="Permissions-Policy" content="camera=(self)" />
+
+  <!-- ensures fullscreen on mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- html5-qrcode library -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      margin: 2rem;
+    /* make camera cover webapp */
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: black;
     }
     #reader {
-      width: 100%;
-      max-width: 400px;
-      margin: 1rem auto;
-      border: 1px solid #ddd;
+      width: 100vw;
+      height: 100vh;
     }
+    /* ensure the <video> uses object-cover so no black bars */
+    .html5-qrcode-video {
+      object-fit: cover !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    /* a little status overlay */
     #info {
-      margin-top: 1rem;
-      color: #555;
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: 0.5em;
+      color: white;
+      background: rgba(0,0,0,0.4);
+      text-align: center;
+      font-family: sans-serif;
     }
   </style>
 </head>
 <body>
-  <h1>Scan a QR Code</h1>
   <div id="reader"></div>
-  <div id="info">Initializing camera…</div>
+  <div id="info">🔄 Initializing camera…</div>
 
   <script>
-    // helper to write status
     const infoEl = document.getElementById("info");
-    function setInfo(msg) { infoEl.textContent = msg; }
+    const setInfo = msg => { infoEl.textContent = msg; };
 
-    // Telegram WebApp (if inside Telegram)
+    // if inside Telegram, expand the WebApp frame
     const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.expand(); 
-    }
+    if (tg) tg.expand();
 
-    // Create the scanner
+    // instantiate the QR scanner
     const html5Qr = new Html5Qrcode("reader");
 
-    // First, list cameras
+    // pick the rear-facing camera by default
     Html5Qrcode.getCameras()
       .then(cameras => {
         if (!cameras || !cameras.length) {
-          setInfo("❌ No cameras found.");
+          setInfo("❌ No cameras found");
           return;
         }
-        // choose the first camera
-        const cameraId = cameras[0].id;
-        setInfo("🎥 Starting camera…");
+        // look for labels that hint at the back camera
+        let backCam = cameras.find(cam =>
+          /back|rear|environment/i.test(cam.label)
+        ) || cameras[0];
 
-        // now start scanning
-        html5Qr.start(
-          { deviceId: { exact: cameraId } },
-          { fps: 10, qrbox: 250 },
+        setInfo("🎥 Starting rear camera…");
+
+        return html5Qr.start(
+          { deviceId: { exact: backCam.id } },
+          {
+            fps: 10,
+            // full-screen scan area
+            qrbox: { width: window.innerWidth, height: window.innerHeight }
+          },
           decodedText => {
-            setInfo("✅ QR code detected!");
-            // send data back to Telegram (or just alert if not in Telegram)
-            if (tg) {
-              tg.sendData(decodedText);
-            } else {
-              alert("Scanned: " + decodedText);
-            }
-            html5Qr.stop();
+            setInfo("✅ QR detected!");
+            // send back to Telegram or alert if testing in a normal browser
+            if (tg) tg.sendData(decodedText);
+            else alert("Scanned: " + decodedText);
+
+            // don’t stop if you want to keep scanning more codes:
+            // html5Qr.stop();
           },
           error => {
-            // you can log decode errors if you like
-            // console.warn("decode error", error);
+            // decode failures are normal while camera is searching
           }
-        )
-        .catch(err => {
-          console.error("Unable to start scanner", err);
-          setInfo("❌ Could not start camera. Check permissions.");
-        });
+        );
       })
       .catch(err => {
-        console.error("getCameras() failed", err);
-        setInfo("❌ Failed to access cameras. Check HTTPS & permissions.");
+        console.error("Camera error", err);
+        setInfo("❌ Unable to access camera. Check permissions & HTTPS");
       });
   </script>
 </body>
