@@ -2,30 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Debug WebApp Host</title>
+  <title>Telegram QR Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <!-- Telegram WebApp helper (required!) -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <style>
-    body { margin:0; padding:1em; font-family:sans-serif; background:#333; color:#fff; }
-    #dbg { background:#e74c3c; padding:1em; border-radius:4px; }
+    html, body { margin:0; padding:0; height:100%; background:#000; }
+    #scanBtn {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      padding:1em 2em; font-size:1.2rem;
+      background:#0288d1; color:#fff; border:none; border-radius:6px;
+      cursor:pointer;
+    }
   </style>
 </head>
 <body>
-  <div id="dbg">
-    <p><strong>Debug Info</strong></p>
-    <p id="host">Host: (loading...)</p>
-    <p id="href">URL: (loading...)</p>
-    <p id="webapp">WebApp API: (checking...)</p>
-  </div>
+  <button id="scanBtn">📷 Scan QR Code</button>
 
   <script>
-    document.getElementById('host').textContent = 'Host: ' + location.host;
-    document.getElementById('href').textContent = 'URL: '  + location.href;
+    // 1) Grab the injected API
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
 
-    if (window.Telegram && window.Telegram.WebApp) {
-      document.getElementById('webapp').textContent = 'WebApp API: ✅ available';
-    } else {
-      document.getElementById('webapp').textContent = 'WebApp API: ❌ NOT available';
-    }
+    // 2) Auto‐launch the native scanner on load
+    tg.showScanQrPopup({ text: "Align the QR code in the frame" });
+
+    // 3) When a QR is scanned, send it back to your bot
+    tg.onEvent("qrTextReceived", e => {
+      tg.sendData(e.data);
+      tg.closeScanQrPopup();
+    });
+
+    // (Optional) handle cancel
+    tg.onEvent("scanQrPopupClosed", () => {
+      // You could show a toast or fallback UI here
+    });
   </script>
 </body>
 </html>
