@@ -2,30 +2,95 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Debug WebApp Host</title>
+  <title>QR Code Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    body { margin:0; padding:1em; font-family:sans-serif; background:#333; color:#fff; }
-    #dbg { background:#e74c3c; padding:1em; border-radius:4px; }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
+    }
+    #reader {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    #result {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <div id="dbg">
-    <p><strong>Debug Info</strong></p>
-    <p id="host">Host: (loading...)</p>
-    <p id="href">URL: (loading...)</p>
-    <p id="webapp">WebApp API: (checking...)</p>
-  </div>
+  <div id="reader"></div>
+  <div id="result"></div>
 
   <script>
-    document.getElementById('host').textContent = 'Host: ' + location.host;
-    document.getElementById('href').textContent = 'URL: '  + location.href;
+    // Initialize Telegram WebApp
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-    if (window.Telegram && window.Telegram.WebApp) {
-      document.getElementById('webapp').textContent = 'WebApp API: ✅ available';
-    } else {
-      document.getElementById('webapp').textContent = 'WebApp API: ❌ NOT available';
+    // Configure QR Scanner
+    const html5QrCode = new Html5Qrcode("reader");
+    const config = {
+      fps: 10,
+      qrbox: { width: 250, height: 250 },
+      aspectRatio: 1.0,
+      formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
+    };
+
+    // Start scanning with back camera
+    function startScanner() {
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        onScanSuccess,
+        onScanFailure
+      ).catch((err) => {
+        console.error("Error starting scanner:", err);
+      });
     }
+
+    // Handle successful scan
+    function onScanSuccess(decodedText, decodedResult) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = `Scanned: ${decodedText}`;
+      
+      // Send result to Telegram
+      tg.sendData(decodedText);
+      
+      // Hide result after 2 seconds
+      setTimeout(() => {
+        resultDiv.style.display = 'none';
+      }, 2000);
+    }
+
+    // Handle scan failure
+    function onScanFailure(error) {
+      // Handle scan failure silently
+      console.warn(`QR scan failure: ${error}`);
+    }
+
+    // Start scanner when page loads
+    document.addEventListener('DOMContentLoaded', startScanner);
+
+    // Clean up when page is closed
+    window.addEventListener('beforeunload', () => {
+      html5QrCode.stop().catch(err => {
+        console.error("Error stopping scanner:", err);
+      });
+    });
   </script>
 </body>
 </html>
