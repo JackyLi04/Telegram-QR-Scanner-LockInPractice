@@ -19,18 +19,18 @@
     tg.ready();
     tg.expand();
 
-    console.log("WebApp loaded, opening scanner…");
+    // 1️⃣ Launch the native scanner once on load
     tg.showScanQrPopup({ text: "Align the QR code in the frame" });
 
+    // 2️⃣ On successful scan → send payload + close everything
     tg.onEvent("qrTextReceived", ({ data }) => {
-      console.log("🎉 qrTextReceived:", data);
-      tg.sendData(data);
-      tg.closeScanQrPopup();
-      tg.close();
+      tg.sendData(data);        // fires WEB_APP_DATA to your bot
+      tg.closeScanQrPopup();    // hide the scanner UI
+      tg.close();               // exit the mini-app entirely
     });
 
+    // 3️⃣ If the user cancels (closes) the scanner, also exit
     tg.onEvent("scanQrPopupClosed", () => {
-      console.log("Scanner closed without result");
       tg.close();
     });
   </script>
