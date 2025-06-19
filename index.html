@@ -4,9 +4,11 @@
   <meta charset="utf-8"/>
   <title>Telegram QR Profile Scanner</title>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <!-- Telegram WebApp SDK (injected API) -->
+  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>html,body{margin:0;padding:0;height:100%;background:#000}</style>
+  <style>
+    html, body { margin:0; padding:0; height:100%; background:#000; }
+  </style>
 </head>
 <body>
   <script>
@@ -14,17 +16,37 @@
     tg.ready();
     tg.expand();
 
-    // Launch native QR-scanner once
-    tg.showScanQrPopup({ text: "Scan a Telegram QR Profile" });
+    // helper regex for exact t.me/username URLs
+    const tgRe = /^(?:https?:\/\/)?t\.me\/[A-Za-z0-9_]{5,32}$/;
 
-    // When we get text, send raw payload back and close
+    // function to (re)open the native scanner with an optional prompt
+    function openScanner(prompt) {
+      tg.showScanQrPopup({
+        text: prompt || "Scan a Telegram profile QR"
+      });
+    }
+
+    // 1) launch on load
+    openScanner();
+
+    // 2) handle scan results
     tg.onEvent("qrTextReceived", ({ data }) => {
-      tg.sendData(data);
-      tg.closeScanQrPopup();
+      if (tgRe.test(data)) {
+        // valid Telegram profile ⇒ send back and close
+        tg.sendData(data);
+        tg.closeScanQrPopup();
+        tg.close();
+      } else {
+        // invalid ⇒ re-open scanner with warning
+        tg.closeScanQrPopup();
+        setTimeout(() => openScanner("Not a Telegram profile. Try again."), 200);
+      }
+    });
+
+    // 3) handle user cancel
+    tg.onEvent("scanQrPopupClosed", () => {
       tg.close();
     });
-    // If user cancels, just close
-    tg.onEvent("scanQrPopupClosed", () => tg.close());
   </script>
 </body>
 </html>
