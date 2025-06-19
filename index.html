@@ -2,16 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Telegram QR Scanner</title>
+  <title>Telegram QR Profile Scanner</title>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <!-- Telegram WebApp SDK (must load first!) -->
+  <!-- Telegram WebApp SDK (injected API) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    html, body {
-      margin:0; padding:0; height:100%;
-      background: #000;
-    }
-  </style>
+  <style>html,body{margin:0;padding:0;height:100%;background:#000}</style>
 </head>
 <body>
   <script>
@@ -19,20 +14,17 @@
     tg.ready();
     tg.expand();
 
-    // 1️⃣ Launch the native scanner once on load
-    tg.showScanQrPopup({ text: "Align the QR code in the frame" });
+    // Launch native QR-scanner once
+    tg.showScanQrPopup({ text: "Scan a Telegram QR Profile" });
 
-    // 2️⃣ On successful scan → send payload + close everything
+    // When we get text, send raw payload back and close
     tg.onEvent("qrTextReceived", ({ data }) => {
-      tg.sendData(data);        // fires WEB_APP_DATA to your bot
-      tg.closeScanQrPopup();    // hide the scanner UI
-      tg.close();               // exit the mini-app entirely
-    });
-
-    // 3️⃣ If the user cancels (closes) the scanner, also exit
-    tg.onEvent("scanQrPopupClosed", () => {
+      tg.sendData(data);
+      tg.closeScanQrPopup();
       tg.close();
     });
+    // If user cancels, just close
+    tg.onEvent("scanQrPopupClosed", () => tg.close());
   </script>
 </body>
 </html>
